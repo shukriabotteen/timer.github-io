@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Shared Timer</title>
+</head>
+<body>
+  <h1 id="display">--:--</h1>
+  <div id="controls" style="display:none;">
+    <input type="number" id="timeInput" placeholder="Seconds" />
+    <button onclick="setTimer()">Set</button>
+    <button onclick="startTimer()">Start</button>
+    <button onclick="stopTimer()">Stop</button>
+  </div>
+  <button onclick="adminLogin()">Admin Login</button>
+
+  <script>
+    const API_URL = "YOUR_GOOGLE_SCRIPT_URL";
+    let isAdmin = false;
+
+    async function fetchTimer() {
+      const res = await fetch(API_URL);
+      const data = await res.json();
+      updateDisplay(data);
+    }
+
+    function updateDisplay({ time }) {
+      const m = String(Math.floor(time / 60)).padStart(2, '0');
+      const s = String(time % 60).padStart(2, '0');
+      document.getElementById("display").textContent = `${m}:${s}`;
+    }
+
+    function adminLogin() {
+      const pw = prompt("Enter admin password:");
+      if (pw === "secret123") {
+        isAdmin = true;
+        document.getElementById("controls").style.display = "block";
+      }
+    }
+
+    async function send(action, value = null) {
+      await fetch(API_URL, {
+        method: "POST",
+        body: JSON.stringify({ action, value, password: "secret123" }),
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+
+    function setTimer() {
+      const t = document.getElementById("timeInput").value;
+      send("set", t);
+    }
+
+    function startTimer() {
+      send("start");
+    }
+
+    function stopTimer() {
+      send("stop");
+    }
+
+    setInterval(fetchTimer, 1000);
+    fetchTimer();
+  </script>
+</body>
+</html>
