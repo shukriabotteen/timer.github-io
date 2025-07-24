@@ -2,54 +2,69 @@
 <html>
 <head>
   <title>Shared Timer</title>
+  <style>
+    body { font-family: sans-serif; text-align: center; padding: 40px; }
+    #display { font-size: 60px; margin: 20px; }
+    #adminControls { display: none; margin-top: 20px; }
+    button, input { font-size: 1.2em; margin: 5px; }
+  </style>
 </head>
 <body>
+
   <h1 id="display">--:--</h1>
-  <div id="controls" style="display:none;">
-    <input type="number" id="timeInput" placeholder="Seconds" />
+  <button onclick="adminLogin()">Admin Login</button>
+
+  <div id="adminControls">
+    <input type="number" id="setTime" placeholder="Seconds" />
     <button onclick="setTimer()">Set</button>
     <button onclick="startTimer()">Start</button>
     <button onclick="stopTimer()">Stop</button>
   </div>
-  <button onclick="adminLogin()">Admin Login</button>
 
   <script>
-    const API_URL = "https://script.google.com/macros/s/AKfycbz3F9s0ULELIy6E0g-9U3X4J1X5R5og7OlAU8ucpQAyqoFzw8wSLwxd9u04hlZoftmK/exec";
-    let isAdmin = true;
+    const API_URL = "https://script.google.com/macros/s/AKfycbz3F9s0ULELIy6E0g-9U3X4J1X5R5og7OlAU8ucpQAyqoFzw8wSLwxd9u04hlZoftmK/exec"; 
+    let isAdmin = false;
 
-    async function fetchTimer() {
-      const res = await fetch(API_URL);
-      const data = await res.json();
-      updateDisplay(data);
+    function cacheBuster() {
+      return '_cb=' + Date.now();
     }
 
-    function updateDisplay({ time }) {
+    async function fetchTimer() {
+      const res = await fetch(API_URL + "?" + cacheBuster());
+      const data = await res.json();
+
+      const time = data.time;
       const m = String(Math.floor(time / 60)).padStart(2, '0');
       const s = String(time % 60).padStart(2, '0');
       document.getElementById("display").textContent = `${m}:${s}`;
     }
 
+    setInterval(fetchTimer, 1000);
+    fetchTimer();
+
     function adminLogin() {
       const pw = prompt("Enter admin password:");
       if (pw === "secret123") {
         isAdmin = true;
-        document.getElementById("controls").style.display = "block";
+        document.getElementById("adminControls").style.display = "block";
+      } else {
+        alert("Wrong password");
       }
     }
 
-  async function send(action, value = null) {
-  const params = new URLSearchParams({
-    action,
-    password: "secret123",
-  });
-  if (value) params.append("value", value);
+    async function send(action, value = null) {
+      const params = new URLSearchParams({
+        action,
+        password: "secret123",
+        _cb: Date.now()
+      });
+      if (value) params.append("value", value);
 
-  await fetch(API_URL + "?" + params.toString());
-}
-
+      await fetch(API_URL + "?" + params.toString());
+    }
 
     function setTimer() {
-      const t = document.getElementById("timeInput").value;
+      const t = document.getElementById("setTime").value;
       send("set", t);
     }
 
@@ -60,9 +75,7 @@
     function stopTimer() {
       send("stop");
     }
-
-    setInterval(fetchTimer, 1000);
-    fetchTimer();
   </script>
+
 </body>
 </html>
