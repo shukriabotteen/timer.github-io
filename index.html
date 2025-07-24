@@ -1,81 +1,87 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Shared Timer</title>
-  <style>
-    body { font-family: sans-serif; text-align: center; padding: 40px; }
-    #display { font-size: 60px; margin: 20px; }
-    #adminControls { display: none; margin-top: 20px; }
-    button, input { font-size: 1.2em; margin: 5px; }
-  </style>
+<meta charset="utf-8">
+<title>Shared Timer</title>
+<style>
+  body{font-family:Arial,Helvetica,sans-serif;text-align:center;padding:40px}
+  #display{font-size:64px;margin:20px 0}
+  #adminControls{display:none;margin-top:15px}
+  in
+  input,button{font-size:18px;margin:4px;padding:6px 10px}
+</style>
 </head>
 <body>
 
-  <h1 id="display">--:--</h1>
-  <button onclick="adminLogin()">Admin Login</button>
+<h1 id="display">--:--</h1>
+<button onclick="adminLogin()">Admin Login</button>
 
-  <div id="adminControls">
-    <input type="number" id="setTime" placeholder="Seconds" />
-    <button onclick="setTimer()">Set</button>
-    <button onclick="startTimer()">Start</button>
-    <button onclick="stopTimer()">Stop</button>
-  </div>
+<div id="adminControls">
+  <input type="number" id="setTime" placeholder="Seconds">
+  <button onclick="setTimer()">Set</button>
+  <button onclick="startTimer()">Start</button>
+  <button onclick="stopTimer()">Stop</button>
+</div>
 
-  <script>
-    const API_URL = "https://script.google.com/macros/s/AKfycbz3F9s0ULELIy6E0g-9U3X4J1X5R5og7OlAU8ucpQAyqoFzw8wSLwxd9u04hlZoftmK/exec"; 
-    let isAdmin = false;
+<script>
+/* ───── CONFIG ───── */
+const API_URL = "https://script.google.com/macros/s/AKfycbz3F9s0ULELIy6E0g-9U3X4J1X5R5og7OlAU8ucpQAyqoFzw8wSLwxd9u04hlZoftmK/exec";  // ← replace!
+const ADMIN_PASS = "secret123";                 // same as script
+/* ────────────────── */
 
-    function cacheBuster() {
-      return '_cb=' + Date.now();
-    }
+let isAdmin = false;
 
-    async function fetchTimer() {
-      const res = await fetch(API_URL + "?" + cacheBuster());
-      const data = await res.json();
+/* --- live fetch every second --- */
+setInterval(fetchTimer, 1000);
+fetchTimer();
 
-      const time = data.time;
-      const m = String(Math.floor(time / 60)).padStart(2, '0');
-      const s = String(time % 60).padStart(2, '0');
-      document.getElementById("display").textContent = `${m}:${s}`;
-    }
+async function fetchTimer(){
+  try{
+    const res = await fetch(API_URL + "?_cb=" + Date.now());
+    const data = await res.json();                      // {time, status}
+    updateDisplay(data.time);
+  }catch(err){
+    console.error("Fetch error", err);
+  }
+}
 
-    setInterval(fetchTimer, 1000);
-    fetchTimer();
+function updateDisplay(sec){
+  const m = String(Math.floor(sec/60)).padStart(2,"0");
+  const s = String(sec%60).padStart(2,"0");
+  document.getElementById("display").textContent = `${m}:${s}`;
+}
 
-    function adminLogin() {
-      const pw = prompt("Enter admin password:");
-      if (pw === "secret123") {
-        isAdmin = true;
-        document.getElementById("adminControls").style.display = "block";
-      } else {
-        alert("Wrong password");
-      }
-    }
+/* --- admin gate --- */
+function adminLogin(){
+  const pw = prompt("Enter admin password:");
+  if(pw === ADMIN_PASS){
+    isAdmin = true;
+    document.getElementById("adminControls").style.display = "block";
+  }else{
+    alert("Wrong password");
+  }
+}
 
-    async function send(action, value = null) {
-      const params = new URLSearchParams({
-        action,
-        password: "secret123",
-        _cb: Date.now()
-      });
-      if (value) params.append("value", value);
+/* --- helper to call backend --- */
+async function send(action, value=null){
+  const p = new URLSearchParams({
+    action,
+    password: ADMIN_PASS,
+    _cb: Date.now()
+  });
+  if(value!==null) p.append("value", value);
+  try{ await fetch(API_URL + "?" + p.toString()); }
+  catch(e){ console.error(e); }
+}
 
-      await fetch(API_URL + "?" + params.toString());
-    }
+/* --- admin buttons --- */
+function setTimer(){ const v = document.getElementById("setTime").value;
+                     if(v) send("set", v); }
 
-    function setTimer() {
-      const t = document.getElementById("setTime").value;
-      send("set", t);
-    }
+function startTimer(){ send("start"); }
 
-    function startTimer() {
-      send("start");
-    }
-
-    function stopTimer() {
-      send("stop");
-    }
-  </script>
+function stopTimer(){  send("stop");  }
+</script>
 
 </body>
 </html>
